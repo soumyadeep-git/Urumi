@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "medusa-store.fullname" . }}-storefront
+  labels:
+    {{- include "medusa-store.labels" . | nindent 4 }}
+    app.kubernetes.io/component: storefront
+spec:
+  replicas: {{ .Values.storefront.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "medusa-store.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: storefront
+  template:
+    metadata:
+      labels:
+        {{- include "medusa-store.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: storefront
+    spec:
+      containers:
+        - name: storefront
+          image: "{{ .Values.storefront.image.repository }}:{{ .Values.storefront.image.tag }}"
+          imagePullPolicy: {{ .Values.storefront.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            - name: NEXT_PUBLIC_MEDUSA_BACKEND_URL
+              value: "http://{{ include "medusa-store.fullname" . }}-backend:{{ .Values.backend.service.port }}"
+            - name: MEDUSA_BACKEND_URL
+              value: "http://{{ include "medusa-store.fullname" . }}-backend:{{ .Values.backend.service.port }}"
+            - name: NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+              value: "pk_c83fc8e2c8ecc54c6b290b322e3e36defe684b8c3d288c32162dbaec39cb91b4"
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.storefront.resources | nindent 12 }}

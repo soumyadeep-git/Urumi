@@ -1,0 +1,36 @@
+global:
+  domain: example.com # Change this to your production domain
+
+backend:
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+storefront:
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+postgresql:
+  primary:
+    persistence:
+      size: 10Gi
+      # storageClass: default # or specific class like longhorn
+    resources:
+      limits:
+        memory: 1Gi
+      requests:
+        memory: 256Mi
+
+redis:
+  master:
+    persistence:
+      size: 2Gi

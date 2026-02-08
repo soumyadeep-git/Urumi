@@ -1,0 +1,69 @@
+global:
+  domain: urumi.local
+
+backend:
+  image:
+    repository: medusa-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 9000
+  env:
+    jwtSecret: "supersecret"
+    cookieSecret: "supersecret"
+    storeCors: "http://.*"
+    adminCors: "http://.*"
+    authCors: "http://.*"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+storefront:
+  image:
+    repository: medusa-storefront
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 8000
+  env:
+    medusaBackendUrl: "http://medusa-store-backend:9000"
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+
+postgresql:
+  enabled: true
+  image:
+    registry: docker.io
+    repository: bitnami/postgresql
+    tag: latest
+  auth:
+    username: medusa
+    password: medusa_password
+    database: medusa
+  primary:
+    persistence:
+      enabled: true
+      size: 1Gi
+
+redis:
+  enabled: true
+  image:
+    registry: docker.io
+    repository: bitnami/redis
+    tag: latest
+  architecture: standalone
+  auth:
+    enabled: false
