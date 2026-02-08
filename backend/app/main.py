@@ -28,6 +28,7 @@ def read_root():
 @app.get("/stores", response_model=List[schemas.Store])
 def list_stores():
     releases = helm.list_releases()
+    store_names = k8s_utils.get_store_names()
     stores = []
     for r in releases:
         store_id = r["name"]
@@ -61,17 +62,20 @@ def list_stores():
 
         stores.append(schemas.Store(
             id=store_id,
-            name=store_id,
+            name=store_names.get(store_id, store_id),
             status=status,
             url=helm.get_ingress_url(store_id),
             created_at=created_at
         ))
     return stores
 
-def provision_workflow(store_id: str):
-    logger.info(f"Starting provisioning workflow for {store_id}")
+def provision_workflow(store_id: str, store_name: str):
+    logger.info(f"Starting provisioning workflow for {store_id} ({store_name})")
     try:
         helm.install_store(store_id)
+        
+        # Annotate namespace with display name
+        k8s_utils.annotate_namespace(store_id, "urumi.io/store-name", store_name)
         
         logger.info(f"Waiting for seed job to complete for {store_id}...")
         key = None
@@ -97,7 +101,7 @@ def provision_workflow(store_id: str):
 def create_store(store: schemas.StoreCreate, background_tasks: BackgroundTasks):
     store_id = f"store-{uuid.uuid4().hex[:8]}"
     
-    background_tasks.add_task(provision_workflow, store_id)
+    background_tasks.add_task(provision_workflow, store_id, store.name)
     
     return schemas.Store(
         id=store_id,

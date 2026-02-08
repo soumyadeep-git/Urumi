@@ -28,14 +28,51 @@ def get_deployment_status(namespace: str, name: str) -> str:
         logger.debug(f"Error checking deployment {name} in {namespace}: {e}")
         return "Provisioning"
 
-def is_namespace_terminating(namespace: str) -> bool:
+def annotate_namespace(namespace: str, key: str, value: str):
     try:
         config.load_kube_config()
-        v1 = client.CoreV1Api()
-        ns = v1.read_namespace(namespace)
-        return ns.status.phase == "Terminating"
     except:
-        return False
+        config.load_incluster_config()
+    
+    v1 = client.CoreV1Api()
+    
+    # Sanitize value slightly if needed, but annotations allow arbitrary strings
+    body = {
+        "metadata": {
+            "annotations": {
+                key: value
+            }
+        }
+    }
+    
+    try:
+        v1.patch_namespace(namespace, body)
+        logger.info(f"Annotated namespace {namespace} with {key}={value}")
+    except Exception as e:
+        logger.error(f"Failed to annotate namespace {namespace}: {e}")
+
+def get_store_names() -> dict:
+    """Returns a dict mapping namespace -> store display name from annotations."""
+    try:
+        config.load_kube_config()
+    except:
+        try:
+            config.load_incluster_config()
+        except:
+            return {}
+            
+    v1 = client.CoreV1Api()
+    try:
+        # We could filter by label if we added one, but for now just list all and check annotation
+        namespaces = v1.list_namespace()
+        names = {}
+        for ns in namespaces.items:
+            if ns.metadata.annotations and "urumi.io/store-name" in ns.metadata.annotations:
+                names[ns.metadata.name] = ns.metadata.annotations["urumi.io/store-name"]
+        return names
+    except Exception as e:
+        logger.error(f"Failed to list namespaces: {e}")
+        return {}
 
 def get_publishable_key(namespace: str) -> str:
     try:
