@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "medusa-store.fullname" . }}-default-deny
+  labels:
+    {{- include "medusa-store.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "medusa-store.fullname" . }}-allow-ingress
+  labels:
+    {{- include "medusa-store.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ingress-nginx
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: ingress-nginx
+  # Allow traffic from within the same namespace (backend <-> db <-> redis <-> storefront)
+  - from:
+    - podSelector: {}
