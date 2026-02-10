@@ -74,6 +74,28 @@ def get_store_names() -> dict:
         logger.error(f"Failed to list namespaces: {e}")
         return {}
 
+def get_store_custom_domains() -> dict:
+    """Returns a dict mapping namespace -> custom domain from annotations."""
+    try:
+        config.load_kube_config()
+    except:
+        try:
+            config.load_incluster_config()
+        except:
+            return {}
+            
+    v1 = client.CoreV1Api()
+    try:
+        namespaces = v1.list_namespace()
+        domains = {}
+        for ns in namespaces.items:
+            if ns.metadata.annotations and "urumi.io/custom-domain" in ns.metadata.annotations:
+                domains[ns.metadata.name] = ns.metadata.annotations["urumi.io/custom-domain"]
+        return domains
+    except Exception as e:
+        logger.error(f"Failed to list namespaces: {e}")
+        return {}
+
 def get_publishable_key(namespace: str) -> str:
     try:
         config.load_kube_config()

@@ -5,16 +5,27 @@ metadata:
   labels:
     {{- include "medusa-store.labels" . | nindent 4 }}
   annotations:
-    # No rewrite target needed as we match prefixes that exist on backend
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    {{- if .Values.ingress.tls.enabled }}
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.tls.clusterIssuer }}
+    {{- end }}
 spec:
-  ingressClassName: nginx
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - "{{ .Release.Name }}.{{ .Values.global.domain }}"
+        {{- if .Values.ingress.customDomain }}
+        - {{ .Values.ingress.customDomain }}
+        {{- end }}
+      secretName: {{ include "medusa-store.fullname" . }}-tls
+  {{- end }}
   rules:
     - host: "{{ .Release.Name }}.{{ .Values.global.domain }}"
       http:
-        paths:
+        paths: &paths
           # Backend Routes
           - path: /app
             pathType: Prefix
@@ -52,3 +63,8 @@ spec:
                 name: {{ include "medusa-store.fullname" . }}-storefront
                 port:
                   number: {{ .Values.storefront.service.port }}
+    {{- if .Values.ingress.customDomain }}
+    - host: {{ .Values.ingress.customDomain }}
+      http:
+        paths: *paths
+    {{- end }}

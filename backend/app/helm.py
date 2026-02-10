@@ -27,7 +27,7 @@ def list_releases() -> List[Dict]:
         logger.error(f"Failed to list releases: {e}")
         return []
 
-def install_store(store_id: str):
+def install_store(store_id: str, custom_domain: str = None):
     namespace = store_id
     cmd = [
         "helm", "upgrade", "--install", store_id, CHART_PATH,
@@ -35,6 +35,9 @@ def install_store(store_id: str):
         "--create-namespace",
         "--set", f"global.domain=127.0.0.1.nip.io"
     ]
+    if custom_domain:
+        cmd.extend(["--set", f"ingress.customDomain={custom_domain}"])
+    
     run_command(cmd)
 
 def delete_store(store_id: str):

@@ -11,11 +11,12 @@ interface Store {
   created_at: string;
 }
 
-const API_URL = 'http://127.0.0.1:8000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 function Dashboard() {
   const [stores, setStores] = useState<Store[]>([]);
   const [newStoreName, setNewStoreName] = useState('');
+  const [customDomain, setCustomDomain] = useState('');
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,12 +67,13 @@ function Dashboard() {
       const response = await fetch(`${API_URL}/stores`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newStoreName }),
+        body: JSON.stringify({ name: newStoreName, custom_domain: customDomain || null }),
       });
       if (response.ok) {
         const newStore = await response.json();
         setStores([...stores, newStore]);
         setNewStoreName('');
+        setCustomDomain('');
         setIsModalOpen(false);
       }
     } catch (error) {
@@ -227,6 +229,17 @@ function Dashboard() {
                   onChange={(e) => setNewStoreName(e.target.value)}
                   disabled={creating}
                   autoFocus
+                />
+              </div>
+              <div className="form-group">
+                <label>Custom Domain (Optional)</label>
+                <input
+                  className="form-input"
+                  type="text"
+                  placeholder="e.g. shop.example.com"
+                  value={customDomain}
+                  onChange={(e) => setCustomDomain(e.target.value)}
+                  disabled={creating}
                 />
               </div>
               <div className="modal-actions">

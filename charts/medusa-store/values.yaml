@@ -1,6 +1,13 @@
 global:
   domain: urumi.local
 
+ingress:
+  className: nginx
+  customDomain: ""
+  tls:
+    enabled: false
+    clusterIssuer: letsencrypt-prod
+
 backend:
   image:
     repository: medusa-backend
