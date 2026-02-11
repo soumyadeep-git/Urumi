@@ -1,5 +1,11 @@
 global:
-  domain: example.com # Change this to your production domain
+  domain: urumi.ai # Change this to your production domain
+
+ingress:
+  className: traefik # k3s uses traefik by default (vs nginx on local)
+  tls:
+    enabled: true
+    clusterIssuer: letsencrypt-prod
 
 backend:
   resources:
@@ -23,7 +29,7 @@ postgresql:
   primary:
     persistence:
       size: 10Gi
-      # storageClass: default # or specific class like longhorn
+      storageClass: longhorn # Production storage class
     resources:
       limits:
         memory: 1Gi
@@ -34,3 +40,4 @@ redis:
   master:
     persistence:
       size: 2Gi
+      storageClass: longhorn

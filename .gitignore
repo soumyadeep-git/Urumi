@@ -9,3 +9,6 @@ build
 .cursor
 terminals
 *.log
+backend/venv/
+git_backup_root/
+frontend/.env.local

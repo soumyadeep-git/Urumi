@@ -1,65 +1,107 @@
-# Urumi Store Orchestration
+# Urumi - Kubernetes Store Orchestrator
 
-## Prerequisites
-- Docker
-- k3d
-- Helm
+A production-ready platform for provisioning isolated e-commerce stores on Kubernetes. Built with **FastAPI**, **React**, **Helm**, and **MedusaJS**.
+
+![Dashboard Screenshot](./assets/dashboard-preview.png)
+
+## 🚀 Features
+
+- **Kubernetes-Native Provisioning**: Uses Helm to deploy MedusaJS (Backend + Storefront + Postgres + Redis) as isolated tenants.
+- **Strong Isolation**: Each store runs in its own `Namespace` with `NetworkPolicies` and `ResourceQuotas`.
+- **Zero-Touch Automation**: Automatic database migration, seeding, and API key injection. No manual steps required.
+- **Production Ready**: Same Helm charts for Local (k3d) and Production (k3s/VPS).
+- **Dynamic Ingress**: Automated DNS resolution using `nip.io` for local development and production.
+- **Modern Dashboard**: React-based UI with optimistic updates, real-time status tracking, and 3D landing page.
+
+## 🛠️ System Architecture
+
+- **Orchestrator**: Python (FastAPI) service that wraps Helm CLI and `kubectl`. Manages the lifecycle of stores.
+- **Dashboard**: React + Vite frontend for user interaction.
+- **Infrastructure**:
+  - **k3d/k3s**: Kubernetes distribution.
+  - **Nginx Ingress**: Routing traffic to specific store namespaces based on host headers.
+  - **Storage**: LocalPath (local) or Longhorn/EBS (prod) for Postgres persistence.
+
+## 🏃‍♂️ Quick Start (Local)
+
+### Prerequisites
+- Docker & k3d
+- Helm & kubectl
+- Node.js & Yarn
 - Python 3.10+
-- Node.js 18+
 
-## Local Setup
+### 1. Start Kubernetes Cluster
+```bash
+k3d cluster create urumi-cluster --port "80:80@loadbalancer" --agents 1
+```
 
-1. **Setup Cluster**:
+### 2. Start the Orchestrator (Backend)
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python -m app.main
+```
+*Server runs on http://127.0.0.1:8000*
+
+### 3. Start the Dashboard (Frontend)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+*Dashboard runs on http://localhost:5173*
+
+### 4. Create a Store
+1. Open the Dashboard.
+2. Click "New Store".
+3. Enter a name (e.g., "nike").
+4. Wait for provisioning (approx 2-3 mins for first pull, 30s subsequent).
+5. Click "Open" to visit the store at `http://nike.127.0.0.1.nip.io`.
+
+## 🌍 Production Setup (VPS / k3s)
+
+1. **Install k3s**:
    ```bash
-   ./scripts/setup_k3d.sh
+   curl -sfL https://get.k3s.io | sh -
    ```
 
-2. **Build Images**:
-   ```bash
-   ./scripts/build_images.sh
-   ```
-   *Note: This builds Medusa Backend/Storefront and imports them into k3d.*
+2. **Deploy Orchestrator**:
+   Build the Docker images for backend/frontend and deploy them using a separate Helm chart or `docker-compose`.
 
-3. **Install Dependencies**:
-   ```bash
-   # Backend
-   cd backend
-   pip install -r requirements.txt
-   
-   # Frontend
-   cd ../frontend
-   npm install
+3. **Configure Domain**:
+   Update `backend/app/helm.py` or pass `global.domain` via `values-prod.yaml` to match your real DNS (e.g., `*.urumi.ai`).
+
+   ```yaml
+   # charts/medusa-store/values-prod.yaml
+   global:
+     domain: "urumi.ai"
+   ingress:
+     className: "traefik" # k3s default
    ```
 
-4. **Start Services**:
-   ```bash
-   # Terminal 1: Orchestrator
-   cd backend/app
-   uvicorn main:app --reload --port 8000
-   
-   # Terminal 2: Dashboard
-   cd frontend
-   npm run dev
-   ```
+4. **SSL/TLS**:
+   Install `cert-manager` and `ClusterIssuer`. The Ingress templates support TLS configuration.
 
-## Usage
+## 🧪 Testing
 
-1. Open Dashboard at `http://localhost:5173`.
-2. Click "Create Store".
-3. Wait for status to become "Ready" (polling every 5s).
-4. Click "Open Store" to view the storefront (mapped to `store-id.urumi.local`).
+- **Liveness**: Backend checks if pods are `Running`.
+- **End-to-End**:
+  1. Create Store -> Status changes to "Provisioning".
+  2. Wait ~1 min -> Status changes to "Ready".
+  3. Visit URL -> Medusa Storefront loads.
+  4. Add to Cart -> Checkout -> Order Created.
 
-**Important**: Add `127.0.0.1 *.urumi.local` to your `/etc/hosts`.
+## 🛡️ Security & Isolation
 
-## Deployment to VPS (Production)
+- **Network Policies**: Default deny-all ingress for store namespaces. Only allows traffic from Ingress Controller.
+- **Resource Quotas**: Hard limits on CPU/Memory per tenant to prevent "noisy neighbor" issues.
+- **Secrets**: Database credentials are auto-generated (in a real prod scenario, integrate with Vault/SealedSecrets).
 
-1. **Cluster**: Ensure `k3s` is running.
-2. **Ingress**: Install Nginx Ingress.
-3. **DNS**: Point `*.yourdomain.com` to VPS IP.
-4. **Deploy Store**:
-   The Orchestrator can run in-cluster or externally. Configure `values-prod.yaml` with your domain.
-   
-   To deploy a store manually for testing:
-   ```bash
-   helm install my-store ./charts/medusa-store -f ./charts/medusa-store/values-prod.yaml --namespace store-prod --create-namespace
-   ```
+## 📂 Deliverables
+
+- `backend/`: FastAPI Orchestrator code.
+- `frontend/`: React Dashboard code.
+- `charts/`: Helm charts for Medusa store.
+- `SYSTEM_DESIGN.md`: Detailed architectural decisions and tradeoffs.
